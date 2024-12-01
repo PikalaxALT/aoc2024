@@ -8,7 +8,8 @@ class Day1 : public aoc2024::Impl {
     std::vector<int> left;
     std::vector<int> right;
 
-    void parse (std::string const &input) {
+public:
+    Day1 (std::string const &input) : aoc2024::Impl(input) {
         using std::operator""sv;
         const int nlines = std::ranges::count(input, '\n');
 
@@ -28,13 +29,11 @@ class Day1 : public aoc2024::Impl {
             right.push_back(std::stoi(row.back()));
         }
 
-        std::ranges::sort(left);
-        std::ranges::sort(right);
     }
 
-public:
-    void part1 (std::string const &input) override {
-        parse(input);
+    void part1 () final {
+        std::ranges::sort(left);
+        std::ranges::sort(right);
         int total_distance = 0;
         for (const auto [l, r] : std::views::zip(left, right)) {
             total_distance += std::abs(l - r);
@@ -43,9 +42,7 @@ public:
         std::cout << total_distance << "\n";
     }
 
-    void part2 (std::string const &input) override {
-        parse(input);
-
+    void part2 () final {
         int total_similarity = 0;
         std::map<int, int> counter {};
         for (const int x : right) {

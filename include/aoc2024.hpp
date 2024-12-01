@@ -45,10 +45,12 @@ namespace aoc2024 {
 
     class Impl {
     public:
-        virtual void part1 (const std::string &input) {
+        Impl() = delete;
+        Impl(const std::string &input) {}
+        virtual void part1 () {
             std::cout << "Day " << day << " part 1 not implemented\n";
         }
-        virtual void part2 (const std::string &input) {
+        virtual void part2 () {
             std::cout << "Day " << day << " part 2 not implemented\n";
         }
     };
@@ -59,28 +61,27 @@ namespace aoc2024 {
         std::string example = get_example();
         std::string testcase = get_testcase();
 
+        cls example_cls {example};
+        cls testcase_cls {testcase};
+
         if (!example.empty()) {
             std::cout << "\n === PART 1 EXAMPLE ===\n\n";
-            cls kls {};
-            kls.part1(example);
+            example_cls.part1();
         }
 
         if (!testcase.empty()) {
             std::cout << "\n === PART 1 TEST CASE ===\n\n";
-            cls kls {};
-            kls.part1(testcase);
+            testcase_cls.part1();
         }
 
         if (!example.empty()) {
             std::cout << "\n === PART 2 EXAMPLE ===\n\n";
-            cls kls {};
-            kls.part2(example);
+            example_cls.part2();
         }
 
         if (!testcase.empty()) {
             std::cout << "\n === PART 2 TEST CASE ===\n\n";
-            cls kls {};
-            kls.part2(testcase);
+            testcase_cls.part2();
         }
     }
 }

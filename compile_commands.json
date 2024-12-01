@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/Users/pikalaxalt/aoc2024/build-cmake-Debug",
+  "command": "/usr/bin/clang++ -DAOC2024_DAY=1 -DBOOST_ATOMIC_DYN_LINK -DBOOST_ATOMIC_NO_LIB -DBOOST_CHRONO_DYN_LINK -DBOOST_CHRONO_NO_LIB -DBOOST_FILESYSTEM_DYN_LINK -DBOOST_FILESYSTEM_NO_LIB -DBOOST_LOG_DYN_LINK -DBOOST_LOG_NO_LIB -DBOOST_REGEX_DYN_LINK -DBOOST_REGEX_NO_LIB -DBOOST_THREAD_DYN_LINK -DBOOST_THREAD_NO_LIB -I/Users/pikalaxalt/aoc2024/include -isystem /opt/homebrew/anaconda3/include -g -std=gnu++2b -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.5.sdk -o CMakeFiles/aoc2024_1.dir/src/aoc2024_1.cpp.o -c /Users/pikalaxalt/aoc2024/src/aoc2024_1.cpp",
+  "file": "/Users/pikalaxalt/aoc2024/src/aoc2024_1.cpp",
+  "output": "CMakeFiles/aoc2024_1.dir/src/aoc2024_1.cpp.o"
+}
+]

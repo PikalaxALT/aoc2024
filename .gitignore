@@ -1,0 +1,5 @@
+build-cmake-*
+.vscode
+.cache
+compile_command.json
+data/testcases

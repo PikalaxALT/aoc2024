@@ -1,6 +1,5 @@
 #include <charconv>
 #include <string>
-#include <sstream>
 #include <vector>
 #include <ranges>
 #include <string_view>
@@ -9,21 +8,21 @@
 class Day2 : public aoc2024::Impl {
     std::vector<std::vector<int>> modules;
 
-    int getUnsafeLevel(const std::vector<int> &module) {
+    bool isUnsafe(const std::vector<int> &module) {
         if (module.size() < 2) {
-            return -1;
+            return false;
         }
         int diff = module[1] - module[0];
         if (diff == 0 || std::abs(diff) > 3) {
-            return 0;
+            return true;
         }
         for (int i = 1; i < module.size() - 1; ++i) {
             int curdiff = module[i + 1] - module[i];
             if (curdiff * diff < 1 || std::abs(curdiff) > 3) {
-                return i;
+                return true;
             }
         }
-        return -1;
+        return false;
     }
 public:
     Day2 (const std::string &input) : aoc2024::Impl(input) {
@@ -45,7 +44,7 @@ public:
     void part1 () final {
         int nsafe = 0;
         for (const auto &module : modules) {
-            nsafe += getUnsafeLevel(module) == -1;
+            nsafe += isUnsafe(module);
         }
         std::cout << nsafe << std::endl;
     }
@@ -53,14 +52,14 @@ public:
     void part2 () final {
         int nsafe = 0;
         for (const auto &module : modules) {
-            if (getUnsafeLevel(module) == -1) {
+            if (isUnsafe(module)) {
                 ++nsafe;
                 continue;
             }
             auto cur = module;
             cur.erase(cur.begin());
             for (size_t i = 0; i <= cur.size(); ++i) {
-                if (getUnsafeLevel(cur) == -1) {
+                if (isUnsafe(cur)) {
                     ++nsafe;
                     break;
                 }

@@ -27,12 +27,9 @@ class Day2 : public aoc2024::Impl {
 public:
     Day2 (const std::string &input) : aoc2024::Impl(input) {
         using std::operator""sv;
-        size_t nmodules = std::ranges::count(input, '\n');
+        size_t nmodules = std::ranges::count(input, '\n') + 1;
         modules.reserve(nmodules);
         for (const auto &line : std::views::split(std::string_view(input), "\n"sv)) {
-            if (line.empty()) {
-                break;
-            }
             auto &level = modules.emplace_back();
             level.reserve(std::ranges::count(line, ' ') + 1);
             for (const auto &val : std::views::split(std::string_view(line), " "sv)) {

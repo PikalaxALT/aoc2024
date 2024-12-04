@@ -60,6 +60,8 @@ namespace aoc2024 {
         std::cout << intro_message() << "\n";
         std::string example = get_example();
         std::string testcase = get_testcase();
+        example = example.substr(0, example.find_last_not_of('\n') + 1);
+        testcase = testcase.substr(0, testcase.find_last_not_of('\n') + 1);
 
         cls example_cls {example};
         cls testcase_cls {testcase};

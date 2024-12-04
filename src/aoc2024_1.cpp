@@ -11,7 +11,7 @@ class Day1 : public aoc2024::Impl {
 public:
     Day1 (std::string const &input) : aoc2024::Impl(input) {
         using std::operator""sv;
-        const int nlines = std::ranges::count(input, '\n');
+        const int nlines = std::ranges::count(input, '\n') + 1;
 
         left.clear();
         right.clear();
@@ -20,9 +20,6 @@ public:
         right.reserve(nlines);
 
         for (const auto& line : std::views::split(std::string_view(input), "\n"sv)) {
-            if (line.empty()) {
-                break;
-            }
             const std::string_view &view {line};
             auto row = std::views::split(view, " "sv) | std::ranges::to<std::vector<std::string>>();
             left.push_back(std::stoi(row.front()));

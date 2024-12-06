@@ -3,7 +3,7 @@ build-cmake-*
 .vscode
 .cache
 compile_commands.json
-data/testcases
+data
 
 # Python
 __pycache__

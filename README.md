@@ -18,6 +18,8 @@ cmake --build build
 
 ## Set up data
 
+Copy the examples from [the server](https://adventofcode.com/2024) in `data/examples`. Identify each file simply by the day number eg. `1.txt`.
+
 Save your test cases from [the server](https://adventofcode.com/2024) in `data/testcases`. Identify each file simply by the day number eg. `1.txt`.
 
 ## To run

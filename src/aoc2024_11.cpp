@@ -1,36 +1,50 @@
 #include <ranges>
-#include <numeric>
-#include <unordered_set>
-#include <deque>
+#include <array>
 #include "aoc2024.hpp"
+
+constexpr std::array<unsigned long long, 20> powersOf10 {{
+    1ull,
+    10ull,
+    100ull,
+    1000ull,
+    10000ull,
+    100000ull,
+    1000000ull,
+    10000000ull,
+    100000000ull,
+    1000000000ull,
+    10000000000ull,
+    100000000000ull,
+    1000000000000ull,
+    10000000000000ull,
+    100000000000000ull,
+    1000000000000000ull,
+    10000000000000000ull,
+    100000000000000000ull,
+    1000000000000000000ull,
+    10000000000000000000ull,
+}};
+
+constexpr unsigned ilog10(unsigned long long x) {
+    return std::ranges::find_if_not(powersOf10, [=](unsigned long long p) {
+        return p <= x;
+    }) - powersOf10.begin();
+}
+
+constexpr unsigned long long ipow10(unsigned exponent) {
+    return powersOf10[exponent];
+}
 
 class Day11 : public aoc2024::Impl {
     std::vector<unsigned long long> stones;
 
-    constexpr unsigned ndigits(unsigned long long x, unsigned base = 10) const {
-        unsigned result = 1;
-        while (x >= base) {
-            ++result;
-            x /= base;
-        }
-        return result;
-    }
-
-    constexpr unsigned long long pow(unsigned exponent, unsigned base = 10) const {
-        unsigned long long result = 1;
-        for (unsigned i = 0; i < exponent; ++i) {
-            result *= base;
-        }
-        return result;
-    }
-
     constexpr std::vector<unsigned long long> blinkStone(unsigned long long x) const {
         if (x == 0) {
             return {1};
-        } else if (ndigits(x) & 1) {
+        } else if (ilog10(x) & 1) {
             return {x * 2024ull};
         } else {
-            auto div = pow(ndigits(x) / 2);
+            auto div = ipow10(ilog10(x) / 2);
             return { x / div, x % div };
         }
     }

@@ -44,6 +44,7 @@ namespace aoc2024 {
     }
 
     class Impl {
+        bool example = false;
     public:
         Impl() = delete;
         Impl(const std::string &input) {}
@@ -52,6 +53,12 @@ namespace aoc2024 {
         }
         virtual void part2 () {
             std::cout << "Day " << day << " part 2 not implemented\n";
+        }
+        bool isExample() const {
+            return example;
+        }
+        void setExample(bool ex = true) {
+            example = ex;
         }
     };
 
@@ -64,6 +71,7 @@ namespace aoc2024 {
         testcase = testcase.substr(0, testcase.find_last_not_of('\n') + 1);
 
         cls example_cls {example};
+        example_cls.setExample();
         cls testcase_cls {testcase};
 
         if (!example.empty()) {

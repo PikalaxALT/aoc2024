@@ -37,16 +37,14 @@ class Day14 : public aoc2024::Impl {
     }
 public:
     Day14 (const std::string &input) : aoc2024::Impl(input) {
-        std::string input_c = input;
         std::regex pattern {R"(p=([0-9]+),([0-9]+) v=(-?[0-9]+),(-?[0-9]+))"};
-        for (std::smatch match; std::regex_search(input_c, match, pattern);) {
+        for (std::smatch const &match : std::ranges::subrange(std::sregex_iterator(input.begin(), input.end(), pattern), std::sregex_iterator())) {
             robots.emplace_back(
                 std::stoll(match[1]),
                 std::stoll(match[2]),
                 std::stoll(match[3]),
                 std::stoll(match[4])
             );
-            input_c = match.suffix();
         }
     }
 
@@ -63,8 +61,8 @@ public:
         std::array<int, width> cols {};
         std::array<int, height> rows {};
         int xmod = -1, ymod = -1;
-        constexpr unsigned maxdim = std::max(width, height);
-        for (int steps = 0; steps < maxdim; ++steps) {
+        constexpr unsigned mindim = std::min(width, height);
+        for (int steps = 0; steps < mindim; ++steps) {
             std::ranges::for_each(grid, [](auto &row) {row.fill(false);});
             cols.fill(0);
             rows.fill(0);

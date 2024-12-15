@@ -11,15 +11,13 @@ class Day13 : public aoc2024::Impl {
     std::vector<Machine> machines;
 public:
     Day13 (const std::string &input) : aoc2024::Impl(input) {
-        std::string input_c = input;
         std::regex pattern {R"(Button A: X\+(\d+), Y\+(\d+)\nButton B: X\+(\d+), Y\+(\d+)\nPrize: X=(\d+), Y=(\d+))"};
-        for (std::smatch match; std::regex_search(input_c, match, pattern);) {
+        for (std::smatch const &match : std::ranges::subrange(std::sregex_iterator(input.begin(), input.end(), pattern), std::sregex_iterator())) {
             machines.emplace_back(
                 Machine::coord2ull{std::stoull(match[1]), std::stoull(match[2])},
                 Machine::coord2ull{std::stoull(match[3]), std::stoull(match[4])},
                 Machine::coord2ull{std::stoull(match[5]), std::stoull(match[6])}
             );
-            input_c = match.suffix();
         }
     }
 

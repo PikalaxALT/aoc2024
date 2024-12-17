@@ -20,15 +20,20 @@ class Day15 : public aoc2024::Impl {
     std::string m_input;
 public:
     Day15 (const std::string &input) : aoc2024::Impl(input), m_input(input) {
-        parse();
+        init();
     }
 
-    void parse() {
+    void reset() {
         boxes.clear();
         walls.clear();
         robot.fill(0);
         room.clear();
         moves.clear();
+        width = height = 0;
+        init();
+    }
+
+    void init() {
         using std::operator""sv;
         auto v = std::string_view(m_input)
             | std::views::split("\n"sv)
@@ -254,7 +259,7 @@ public:
     }
 
     void part2 () final {
-        parse();
+        reset();
         {
             typeof(boxes) boxes_c {};
             typeof(walls) walls_c {};

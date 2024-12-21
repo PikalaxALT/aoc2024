@@ -1,18 +1,21 @@
 #include "aoc2024.hpp"
 #include <ranges>
+#include <deque>
 #include <map>
 #include <algorithm>
 
 class Day16 : public aoc2024::Impl {
-    static constexpr std::array<std::array<int, 2>, 4> directions {{
+    using coordi2_t = std::array<int, 2>;
+
+    static constexpr std::array<coordi2_t, 4> directions {{
         {{  0, -1 }}, // north
         {{  1,  0 }}, // east
         {{  0,  1 }}, // south
         {{ -1,  0 }}, // west
     }};
     static constexpr std::string directionChars {"^>v<"};
-    std::array<int, 2> start;
-    std::array<int, 2> end;
+    coordi2_t start;
+    coordi2_t end;
     std::vector<std::string> grid;
 public:
     Day16 (const std::string &input) : aoc2024::Impl(input) {
@@ -26,82 +29,87 @@ public:
         end[1] = std::ranges::find_if(grid, [this](const auto &l) { return (end[0] = l.find('E')) != std::string::npos; }) - grid.begin();
     }
 
-    unsigned long long maze_solve(int x, int y, bool isPart2 = false) {
-        std::vector<std::array<int, 2>> leadingEdge { start };
-        std::vector<std::vector<std::tuple<unsigned long long, int, std::map<std::array<int, 2>, unsigned long long>>>> dp (grid.size());
+    unsigned maze_solve(bool isPart2 = false) {
+        // The strategy is to find the best path, then find all corners leading there
+        std::deque<coordi2_t> leadingEdge {start};
+        std::vector<std::vector<std::tuple<coordi2_t, unsigned, unsigned>>> dp (grid.size());
         std::ranges::for_each(dp, [this](auto &row) {
-            row.assign(grid[0].size(), {-1ull, -1, {}});
+            row.resize(grid[0].size(), {{-1, -1}, 4, -1u});
         });
-        dp[start[1]][start[0]] = {0, 1, {}};
+        dp[start[1]][start[0]] = {start, 1, 0};
+        std::map<std::pair<coordi2_t, coordi2_t>, std::map<coordi2_t, unsigned>> corners;
 
-        for (int i = 0; i < leadingEdge.size(); ++i) {
-            auto [x, y] = leadingEdge[i];
-            if (x == end[0] && y == end[1]) {
+        while (!leadingEdge.empty()) {
+            coordi2_t pos;
+            auto [x, y] = pos = leadingEdge.front();
+            leadingEdge.pop_front();
+            auto [ppos, pdir, pscore] = dp[y][x];
+            if (pos == end) {
+                corners[{pos, pos}][ppos] = pscore;
                 continue;
             }
-            auto &[pscore, dir, tb] = dp[y][x];
             for (int turn = -1; turn <= 1; ++turn) {
-                int cd = (dir + turn) & 3;
-                auto [dx, dy] = directions[cd];
-                if (grid[y + dy][x + dx] == '#') {
+                unsigned ndir = (pdir + turn + 4) % 4;
+                auto [dx, dy] = directions[ndir];
+                int nx = x + dx;
+                int ny = y + dy;
+                if (grid[ny][nx] == '#') {  // wall, do not enter
                     continue;
                 }
-                unsigned long long score = pscore + 1 + 1000 * (turn != 0);
-                auto &[dscore, ddir, dtrace] = dp[y + dy][x + dx];
-                if (score <= dscore) {
-                    dscore = score;
-                    ddir = cd;
-                    dtrace[{x, y}] = pscore;
-                    leadingEdge.push_back({x + dx, y + dy});
+                unsigned nscore = pscore + 1 + 1000 * (turn != 0);
+                coordi2_t npos {nx, ny};
+                auto &[rnpos, rndir, rnscore] = dp[ny][nx];
+                if (nscore <= rnscore) {
+                    rnpos = pos;
+                    rndir = ndir;
+                    rnscore = nscore;
+                    leadingEdge.push_back(npos);
                 }
+                corners[{npos, pos}][ppos] = nscore;
             }
         }
-        if (isPart2) {
-            std::vector<std::array<int, 2>> trailingEdge {end};
-            for (int i = 0; i < trailingEdge.size(); ++i) {
-                auto [x, y] = trailingEdge[i];
-                auto [cs, cd, bt] = dp[y][x];
-                grid[y][x] = 'O';
-                for (auto [pos, pscore] : bt) {
-                    if (pscore < cs) {
-                        trailingEdge.push_back(pos);
-                    }
-                }
-            }
-            return trailingEdge.size();
-        } else {
-            auto [cx, cy] = end;
-            while (cx != start[0] || cy != start[1]) {
-                auto [cs, cd, tb] = dp[cy][cx];
-                auto [cdx, cdy] = directions[cd];
-                cx -= cdx;
-                cy -= cdy;
-                grid[cy][cx] = directionChars[cd];
-            }
-            return std::get<0>(dp[end[1]][end[0]]);
+
+        unsigned finalScore = std::get<2>(dp[end[1]][end[0]]);
+        if (!isPart2) {
+            return finalScore;
         }
+
+        std::deque<std::tuple<coordi2_t, coordi2_t, unsigned>> trailingEdge {{end, end, finalScore}};
+
+        unsigned result = 0;
+        while (!trailingEdge.empty()) {
+            auto [npos, pos, score] = trailingEdge.front();
+            trailingEdge.pop_front();
+            ++result;
+            if (pos == start) {
+                continue;
+            }
+            const auto &tb = corners.at({npos, pos});
+            for (const auto &[ppos, pscore] : tb) {
+                if (pscore != score) {
+                    continue;
+                }
+                unsigned ppscore = score;
+                if (pos != end) {
+                    coordi2_t dir2 { npos[0] - pos[0], npos[1] - pos[1] };
+                    coordi2_t dir1 { pos[0] - ppos[0], pos[1] - ppos[1] };
+                    ppscore -= 1 + 1000 * (dir1 != dir2);
+                }
+                trailingEdge.push_back({pos, ppos, ppscore});
+            }
+        }
+
+        return result;
     }
 
     void part1 () final {
-        std::cout << maze_solve(start[0], start[1]) << std::endl;
-        std::ranges::for_each(grid, [](const auto &row) {
-            std::cerr << row << std::endl;
-        });
+        std::cout << maze_solve(false) << std::endl;
     }
 
-    void part2 () final {
-        std::ranges::for_each(grid, [this](auto &row) {
-            std::ranges::for_each(directionChars, [&](auto c) {
-                std::ranges::replace(row, c, '.');
-            });
-        });
-        grid[start[1]][start[0]] = 'S';
-        grid[end[1]][end[0]] = 'E';
-        std::cout << maze_solve(start[0], start[1], true) << std::endl;
-        std::ranges::for_each(grid, [](const auto &row) {
-            std::cerr << row << std::endl;
-        });
-    }
+    // Not complete
+    // void part2 () final {
+    //     std::cout << maze_solve(true) << std::endl;
+    // }
 };
 
 int main () {

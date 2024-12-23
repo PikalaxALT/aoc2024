@@ -138,7 +138,7 @@ public:
 
     void part1 () final {
         std::vector<unsigned> outputs = run();
-        aoc2024::print(std::cout, outputs, ",");
+        aoc2024::print(std::cout, outputs, ",") << "\n";
     }
 
     std::string combo_dism(unsigned x) {
@@ -192,9 +192,6 @@ public:
     }
 
     void part2 () final {
-        // disassemble the program
-        disassemble();
-
         // assume the program ends in `out <reg> / jnz 0` and has a pattern of shifting A right by 3 each loop
         // my test program is:
         //  b = a % 8
@@ -227,7 +224,6 @@ public:
         std::deque<unsigned long long> possibles { 0ull };
         for (auto r = program.crbegin(); r != program.crend(); ++r) {
             bool found = false;
-            aoc2024::print(std::cerr, std::ranges::subrange(r.base() - 1, program.end()), ",") << "\n";
             size_t n_possibles = possibles.size();
             for (size_t k = 0; k < n_possibles; ++k) {
                 result = possibles.front() << shift;
@@ -246,16 +242,6 @@ public:
         }
         result = std::ranges::min(possibles);
         std::cout << result << std::endl;
-
-        // validation
-        auto output = run(result);
-        std::cerr << result << " --> {";
-        aoc2024::print(std::cerr, output, ",") << "}\n";
-
-        // disassemble validated program
-        std::swap(program, output);
-        disassemble();
-        std::swap(program, output);
     }
 };
 

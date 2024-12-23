@@ -94,4 +94,31 @@ namespace aoc2024 {
             testcase_cls.part2();
         }
     }
+
+    template <typename S, typename R>
+    concept has_left_shift = requires (S s, R r) { s << r; };
+
+    template<typename Strm, std::ranges::range Range, typename Char = char>
+    Strm &print(Strm &strm, Range const &range, const Char *sep = ", ") {
+        for (const Char *_sep = ""; const auto &x : range) {
+            strm << _sep << x;
+            _sep = sep;
+        }
+        return strm;
+    }
+
+    template<typename Strm, std::ranges::range Range, typename Char = char>
+    Strm &print(Strm &strm, Range const &range, const std::basic_string<Char> &sep) {
+        for (std::basic_string<Char> _sep = ""; const auto &x : range) {
+            strm << _sep << x;
+            _sep = sep;
+        }
+        return strm;
+    }
+
+    template<typename Strm, std::ranges::range Range, typename Char = char>
+        requires (std::derived_from<Strm, std::basic_ostream<Char>> && !has_left_shift<Strm, Range>)
+    Strm &operator<<(Strm &strm, Range const &range) {
+        return print(strm, range);
+    }
 }

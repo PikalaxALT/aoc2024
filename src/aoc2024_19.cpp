@@ -24,7 +24,7 @@ public:
             | std::ranges::to<std::vector>();
     }
 
-    unsigned long long isPossible(const std::string_view &target) {
+    unsigned long long isPossible(const std::string_view &target) const {
         std::vector<unsigned long long> dp (target.size() + 1);
         dp[0] = 1;
         for (size_t i = 0; i < target.size(); ++i) {

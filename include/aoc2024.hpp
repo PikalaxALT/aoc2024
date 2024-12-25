@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <sstream>
+#include <map>
 #include <boost/log/trivial.hpp>
 #include <source_location>
 
@@ -121,4 +122,23 @@ namespace aoc2024 {
     Strm &operator<<(Strm &strm, Range const &range) {
         return print(strm, range);
     }
+
+    template<typename R, typename... A>
+    class cached {
+        std::function<R(A...)> _fn;
+        std::map<std::tuple<A...>, R> _cache;
+    public:
+        cached(std::function<R(A...)>&& fn) : _fn(fn) {}
+        R operator()(A... a) {
+            // search in cache
+            auto key = std::make_tuple(std::forward<A>(a)...);
+            auto rit = _cache.find(key);
+            if (rit != _cache.end()) {
+                return rit->second;
+            }
+
+            // cache miss, compute and return
+            return _cache[key] = _fn(std::forward<A>(a)...);
+        }
+    };
 }

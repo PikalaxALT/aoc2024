@@ -38,6 +38,8 @@ class Day21 : public aoc2024::Impl {
         " ^A",
         "<v>",
     }};
+    static std::map<std::pair<char, char>, std::string> routes;
+    static int numDpads;
 
     class RouteIterator {
         std::string permutation;
@@ -117,81 +119,84 @@ class Day21 : public aoc2024::Impl {
         }
     };
 
-    std::vector<std::string> getRobotRouteSegments(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) {
-        return std::vector<std::string>(RouteIterator{start, end, coordsMap}, RouteIterator{});
+    std::ranges::subrange<RouteIterator> getRobotRouteSegments(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) {
+        return std::ranges::subrange(RouteIterator{start, end, coordsMap}, RouteIterator{});
     }
 
-    aoc2024::cached<std::vector<std::string>, char, char> getNumpadRouteSegments {[this](char start, char end) -> std::vector<std::string> {
+    std::ranges::subrange<RouteIterator> getNumpadRouteSegments(char start, char end) {
         return getRobotRouteSegments(start, end, numpadCoords);
-    }};
+    }
 
-    aoc2024::cached<std::vector<std::string>, char, char> getDpadRouteSegments {[this](char start, char end) -> std::vector<std::string> {
+    std::ranges::subrange<RouteIterator> getDpadRouteSegments(char start, char end) {
         return getRobotRouteSegments(start, end, dpadCoords);
-    }};
+    }
 
     aoc2024::cached<std::string, char, char> getBestDpad2RouteSegment {[this](char start, char end) -> std::string {
-        return *RouteIterator{start, end, dpadCoords};
+        return getDpadRouteSegments(start, end).front();
     }};
 
-    std::string getBestDpad2Route(std::string path) {
-        std::string cur;
-        char prev = 'A';
-        for (char c : path) {
-            cur += getBestDpad2RouteSegment(prev, c);
-            prev = c;
+    void build(int numDpads = 2) {
+        if (numDpads == this->numDpads) {
+            return;
         }
-        return cur;
-    }
-
-    std::string getBestDpad1RouteSegment(std::vector<std::string> paths, int numDpads) {
-        std::string best;
-        for (const auto &path : paths) {
-            auto cur = getBestDpad1Route(path, numDpads);
-            if (best.empty() || best.size() > cur.size()) {
-                best = cur;
-            }
-        }
-        return best;
-    }
-
-    std::string getBestDpad1Route(std::string const& path, int numDpads) {
-        static std::map<std::tuple<std::string, int>, std::string> cache;
-        auto cit = cache.find({path, numDpads});
-        if (cit != cache.end()) {
-            return cit->second;
-        }
-        auto &cur = cache[{path, numDpads}];
-        char prev = 'A';
-        for (char c : path) {
-            if (numDpads <= 1) {
-                cur += getBestDpad2RouteSegment(prev, c);
-            } else {
-                cur += getBestDpad1RouteSegment(getDpadRouteSegments(prev, c), numDpads - 1);
-            }
-            prev = c;
-        }
-        return cur;
-    }
-
-    std::string getBestNumpadRouteSegment (char start, char end, int numDpads) {
+        this->numDpads = numDpads;
         using std::operator""s;
-
-        std::vector<std::string> numpadRoutes = getNumpadRouteSegments(start, end);
-        std::string ret;
-        for (const auto &rte : numpadRoutes) {
-            auto cur = getBestDpad1Route(rte, numDpads);
-            if (ret.empty() || ret.size() > cur.size()) {
-                ret = cur;
+        routes.clear();
+        std::map<std::pair<char, char>, std::string> prev;
+        std::map<std::pair<char, char>, std::string> cur;
+        for (int i = 0; i < numDpads; ++i) {
+            std::cerr << "Step " << i << std::endl;
+            for (char origin : "^v<>A"s) {
+                for (char dest : "^v<>A"s) {
+                    std::string &rte = cur[{origin, dest}];
+                    auto rng = getDpadRouteSegments(origin, dest);
+                    if (i == 0) {
+                        rte = rng.front();
+                    } else {
+                        for (std::string path : rng) {
+                            std::string curpath;
+                            char pc = 'A';
+                            for (char c : path) {
+                                curpath += prev[{pc, c}];
+                                pc = c;
+                            }
+                            if (rte.empty() || rte.size() > curpath.size()) {
+                                rte = curpath;
+                            }
+                        }
+                    }
+                    if (origin != dest) {
+                        std::cerr << " -- " << origin << " to " << dest << ": " << rte.size() << std::endl;
+                    }
+                }
+            }
+            prev = cur;
+            cur.clear();
+        }
+        for (char origin : "0123456789A"s) {
+            for (char dest : "0123456789A"s) {
+                std::string &rte = routes[{origin, dest}];
+                auto rng = getNumpadRouteSegments(origin, dest);
+                for (std::string path : rng) {
+                    std::string curpath;
+                    char pc = 'A';
+                    for (char c : path) {
+                        curpath += prev[{pc, c}];
+                        pc = c;
+                    }
+                    if (rte.empty() || rte.size() > curpath.size()) {
+                        rte = curpath;
+                    }
+                }
             }
         }
-        return ret;
     }
 
     std::string get_route(const std::string_view &code, int numDpads = 2) {
         using std::operator""s;
         char prev = 'A';
         return std::accumulate(code.begin(), code.end(), ""s, [&](const std::string &a, char c) {
-            std::string ret = a + getBestNumpadRouteSegment(prev, c, numDpads);
+            std::string ret = a + routes[{prev, c}];
             prev = c;
             return ret;
         });
@@ -205,8 +210,9 @@ public:
             | std::ranges::to<std::vector>();
     }
 
-    void part1 () final {
+    void puzzle(int numDpads) {
         unsigned long long comp = 0ull;
+        build(numDpads);
         for (const auto &code : codes) {
             // get value
             unsigned long long value;
@@ -221,23 +227,18 @@ public:
         std::cout << comp << std::endl;
     }
 
+    void part1 () final {
+        puzzle(2);
+    }
+
     void part2 () final {
-        unsigned long long comp = 0ull;
-        for (const auto &code : codes) {
-            // get value
-            unsigned long long value;
-            std::from_chars(code.begin(), code.end() - 1, value);
-
-            // get commands
-            auto ans = get_route(code, 25);
-
-            // final complexity
-            comp += ans.size() * value;
-        }
-        std::cout << comp << std::endl;
+        puzzle(25);
     }
 };
 
 int main () {
     aoc2024::main<Day21>();
 }
+
+std::map<std::pair<char, char>, std::string> Day21::routes {};
+int Day21::numDpads = 0;

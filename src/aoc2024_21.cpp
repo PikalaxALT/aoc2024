@@ -1,115 +1,197 @@
 #include <ranges>
 #include <map>
-#include <set>
 #include <numeric>
 #include <charconv>
 #include "aoc2024.hpp"
 
 class Day21 : public aoc2024::Impl {
     const std::map<char, std::pair<int, int>> numpadCoords {
-        {'0', {3, 1}},
-        {'1', {2, 0}},
-        {'2', {2, 1}},
-        {'3', {2, 2}},
-        {'4', {1, 0}},
-        {'5', {1, 1}},
-        {'6', {1, 2}},
         {'7', {0, 0}},
         {'8', {0, 1}},
         {'9', {0, 2}},
+        {'4', {1, 0}},
+        {'5', {1, 1}},
+        {'6', {1, 2}},
+        {'1', {2, 0}},
+        {'2', {2, 1}},
+        {'3', {2, 2}},
+        {' ', {3, 0}},
+        {'0', {3, 1}},
         {'A', {3, 2}},
-        {'#', {3, 0}},
     };
     const std::map<char, std::pair<int, int>> dpadCoords {
-        {'<', {1, 0}},
-        {'>', {1, 2}},
+        {' ', {0, 0}},
         {'^', {0, 1}},
-        {'v', {1, 1}},
         {'A', {0, 2}},
-        {'#', {0, 0}},
+        {'<', {1, 0}},
+        {'v', {1, 1}},
+        {'>', {1, 2}},
     };
-    const std::array<std::string_view, 4> numpad {{
-        "987",
-        "654",
-        "321",
-        "#0A",
+    std::vector<std::string_view> codes;
+    std::array<std::string, 4> numpadGrid {{
+        "789",
+        "456",
+        "123",
+        " 0A",
     }};
-    const std::array<std::string_view, 2> dpad {{
-        "#^A",
+    std::array<std::string, 2> dpadGrid {{
+        " ^A",
         "<v>",
     }};
-    std::vector<std::string_view> codes;
 
-    std::vector<std::string> getRobotRoutes(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) {
-        if (start == end) {
-            return {"A"};
+    class RouteIterator {
+        std::string permutation;
+        bool isEnd;
+        std::pair<int, int> start_pos;
+        std::pair<int, int> end_pos;
+        std::pair<int, int> banPos;
+        int dx;
+        int dy;
+        char lr;
+        char ud;
+        bool validPermutation() {
+            if (isEnd) {
+                return true;
+            }
+            size_t turn = permutation.find_first_not_of(permutation[0]);
+            if (turn == std::string::npos) {
+                turn = permutation.size();
+            }
+            if (start_pos.first == banPos.first && end_pos.second == banPos.second && permutation[0] == lr && turn == std::abs(dx)) {
+                return false;
+            }
+            if (start_pos.second == banPos.second && end_pos.first == banPos.first && permutation[0] == ud && turn == std::abs(dy)) {
+                return false;
+            }
+            return true;
         }
-        const auto &start_pos = coordsMap.at(start);
-        const auto &end_pos = coordsMap.at(end);
-        const auto &banPos = coordsMap.at('#');
-        int dx = end_pos.second - start_pos.second;
-        int dy = end_pos.first - start_pos.first;
-        char lr = dx < 0 ? '<' : '>';
-        char ud = dy < 0 ? '^' : 'v';
-        auto route = std::string(std::abs(dx), lr) + std::string(std::abs(dy), ud);
-        std::vector<std::string> ans;
-        do {
-            size_t first_turn = route.find_first_not_of(route.front());
-            if (first_turn == std::string::npos) {
-                first_turn = route.size();
+    public:
+        using difference_type = ssize_t;
+        using value_type = std::string;
+        RouteIterator(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) : isEnd(false) {
+            if (start == end) {
+                return;
             }
-            if (start_pos.first == banPos.first && end_pos.second == banPos.second && route[0] == lr && first_turn == dx) {
-                continue;
+            start_pos = coordsMap.at(start);
+            end_pos = coordsMap.at(end);
+            banPos = coordsMap.at(' ');
+            dx = end_pos.second - start_pos.second;
+            dy = end_pos.first - start_pos.first;
+            lr = dx < 0 ? '<' : '>';
+            ud = dy < 0 ? '^' : 'v';
+            permutation.reserve(std::abs(dx) + std::abs(dy));
+            permutation.append(std::abs(dx), lr);
+            permutation.append(std::abs(dy), ud);
+            if (!validPermutation()) {
+                ++*this;
             }
-            if (start_pos.second == banPos.second && end_pos.first == banPos.first && route[0] == ud && first_turn == dy) {
-                continue;
-            }
-            ans.push_back(route + "A");
-        } while (std::ranges::next_permutation(route).found);
-        if (ans.empty()) {
-            using std::operator""s;
-            throw std::runtime_error("no route from "s + start + " to " + end);
         }
-        return ans;
+        RouteIterator() : isEnd(true) {}
+        RouteIterator(const RouteIterator &rhs) = default;
+        RouteIterator(RouteIterator &&rhs) = default;
+        RouteIterator &operator=(const RouteIterator &rhs) = default;
+        RouteIterator &operator=(RouteIterator &&rhs) = default;
+        RouteIterator &operator++() {
+            while (!isEnd && !(isEnd = !std::ranges::next_permutation(permutation).found) && !validPermutation()) {}
+            return *this;
+        }
+        RouteIterator operator++(int) {
+            RouteIterator ret = *this;
+            ++*this;
+            return ret;
+        }
+        bool operator==(const RouteIterator &rhs) const {
+            if (isEnd) {
+                return rhs.isEnd;
+            }
+            return !rhs.isEnd && permutation == rhs.permutation;
+        }
+        bool operator!=(const RouteIterator &rhs) const {
+            return !(*this == rhs);
+        }
+        std::string operator*() const {
+            if (isEnd) {
+                throw std::out_of_range("Day21::RouteIterator::operator*()");
+            }
+            return permutation + "A";
+        }
+    };
+
+    std::vector<std::string> getRobotRouteSegments(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) {
+        return std::vector<std::string>(RouteIterator{start, end, coordsMap}, RouteIterator{});
     }
 
-    aoc2024::cached<std::vector<std::string>, char, char> getNumpadRoutes {[this](char start, char end) -> std::vector<std::string> {
-        return getRobotRoutes(start, end, numpadCoords);
+    aoc2024::cached<std::vector<std::string>, char, char> getNumpadRouteSegments {[this](char start, char end) -> std::vector<std::string> {
+        return getRobotRouteSegments(start, end, numpadCoords);
     }};
 
-    aoc2024::cached<std::vector<std::string>, char, char> getDpadRoutes {[this](char start, char end) -> std::vector<std::string> {
-        return getRobotRoutes(start, end, dpadCoords);
+    aoc2024::cached<std::vector<std::string>, char, char> getDpadRouteSegments {[this](char start, char end) -> std::vector<std::string> {
+        return getRobotRouteSegments(start, end, dpadCoords);
     }};
 
-    aoc2024::cached<std::string, char, char> getBestDpadRoute {[this](char start, char end) -> std::string {
-        return std::ranges::min(getDpadRoutes(start, end), [](const std::string &a, const std::string &b) {
-            return a.size() < b.size();
-        });
+    aoc2024::cached<std::string, char, char> getBestDpad2RouteSegment {[this](char start, char end) -> std::string {
+        return *RouteIterator{start, end, dpadCoords};
     }};
 
-    aoc2024::cached<std::string, char, char> route {[this](char start, char end) -> std::string {
-        using std::operator""s;
-        auto compare_string_lengths = [](const std::string &a, const std::string &b) {
-            return a.size() < b.size();
-        };
+    std::string getBestDpad2Route(std::string path) {
+        std::string cur;
+        char prev = 'A';
+        for (char c : path) {
+            cur += getBestDpad2RouteSegment(prev, c);
+            prev = c;
+        }
+        return cur;
+    }
 
-        std::vector<std::string> numpadRoutes = getNumpadRoutes(start, end);
-        std::set<std::string> dpad1Routes;
-        for (const auto &rte : numpadRoutes) {
-            char prev = 'A';
-            std::string ret;
-            for (const char c : rte) {
-                std::vector<std::string> dpad2Routes = getDpadRoutes(prev, c);
-
+    std::string getBestDpad1RouteSegment(std::vector<std::string> paths, int numDpads) {
+        std::string best;
+        for (const auto &path : paths) {
+            auto cur = getBestDpad1Route(path, numDpads);
+            if (best.empty() || best.size() > cur.size()) {
+                best = cur;
             }
         }
-    }};
+        return best;
+    }
 
-    std::string get_route(const std::string_view &code) {
+    std::string getBestDpad1Route(std::string const& path, int numDpads) {
+        static std::map<std::tuple<std::string, int>, std::string> cache;
+        auto cit = cache.find({path, numDpads});
+        if (cit != cache.end()) {
+            return cit->second;
+        }
+        auto &cur = cache[{path, numDpads}];
+        char prev = 'A';
+        for (char c : path) {
+            if (numDpads <= 1) {
+                cur += getBestDpad2RouteSegment(prev, c);
+            } else {
+                cur += getBestDpad1RouteSegment(getDpadRouteSegments(prev, c), numDpads - 1);
+            }
+            prev = c;
+        }
+        return cur;
+    }
+
+    std::string getBestNumpadRouteSegment (char start, char end, int numDpads) {
+        using std::operator""s;
+
+        std::vector<std::string> numpadRoutes = getNumpadRouteSegments(start, end);
+        std::string ret;
+        for (const auto &rte : numpadRoutes) {
+            auto cur = getBestDpad1Route(rte, numDpads);
+            if (ret.empty() || ret.size() > cur.size()) {
+                ret = cur;
+            }
+        }
+        return ret;
+    }
+
+    std::string get_route(const std::string_view &code, int numDpads = 2) {
         using std::operator""s;
         char prev = 'A';
         return std::accumulate(code.begin(), code.end(), ""s, [&](const std::string &a, char c) {
-            std::string ret = a + route(prev, c);
+            std::string ret = a + getBestNumpadRouteSegment(prev, c, numDpads);
             prev = c;
             return ret;
         });
@@ -124,7 +206,6 @@ public:
     }
 
     void part1 () final {
-        // This crashes. I'm too smoothbrained to fix.
         unsigned long long comp = 0ull;
         for (const auto &code : codes) {
             // get value
@@ -132,8 +213,7 @@ public:
             std::from_chars(code.begin(), code.end() - 1, value);
 
             // get commands
-            auto ans = get_route(code);
-            std::cerr << code << ": " << ans << std::endl;
+            auto ans = get_route(code, 2);
 
             // final complexity
             comp += ans.size() * value;
@@ -141,7 +221,21 @@ public:
         std::cout << comp << std::endl;
     }
 
-    void part2 () final {}
+    void part2 () final {
+        unsigned long long comp = 0ull;
+        for (const auto &code : codes) {
+            // get value
+            unsigned long long value;
+            std::from_chars(code.begin(), code.end() - 1, value);
+
+            // get commands
+            auto ans = get_route(code, 25);
+
+            // final complexity
+            comp += ans.size() * value;
+        }
+        std::cout << comp << std::endl;
+    }
 };
 
 int main () {

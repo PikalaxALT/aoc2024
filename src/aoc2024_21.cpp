@@ -38,165 +38,117 @@ class Day21 : public aoc2024::Impl {
         " ^A",
         "<v>",
     }};
-    static std::map<std::pair<char, char>, std::string> routes;
+    static std::map<std::pair<char, char>, unsigned long long> routes;
     static int numDpads;
+    static constexpr std::string numpadChars {"0123456789A"};
+    static constexpr std::string dpadChars {"^v<>A"};
 
-    class RouteIterator {
-        std::string permutation;
-        bool isEnd;
-        std::pair<int, int> start_pos;
-        std::pair<int, int> end_pos;
-        std::pair<int, int> banPos;
-        int dx;
-        int dy;
-        char lr;
-        char ud;
-        bool validPermutation() {
-            if (isEnd) {
-                return true;
-            }
-            size_t turn = permutation.find_first_not_of(permutation[0]);
-            if (turn == std::string::npos) {
-                turn = permutation.size();
-            }
-            if (start_pos.first == banPos.first && end_pos.second == banPos.second && permutation[0] == lr && turn == std::abs(dx)) {
-                return false;
-            }
-            if (start_pos.second == banPos.second && end_pos.first == banPos.first && permutation[0] == ud && turn == std::abs(dy)) {
-                return false;
-            }
-            return true;
-        }
-    public:
-        using difference_type = ssize_t;
-        using value_type = std::string;
-        RouteIterator(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) : isEnd(false) {
-            if (start == end) {
-                return;
-            }
-            start_pos = coordsMap.at(start);
-            end_pos = coordsMap.at(end);
-            banPos = coordsMap.at(' ');
-            dx = end_pos.second - start_pos.second;
-            dy = end_pos.first - start_pos.first;
-            lr = dx < 0 ? '<' : '>';
-            ud = dy < 0 ? '^' : 'v';
-            permutation.reserve(std::abs(dx) + std::abs(dy));
-            permutation.append(std::abs(dx), lr);
-            permutation.append(std::abs(dy), ud);
-            if (!validPermutation()) {
-                ++*this;
-            }
-        }
-        RouteIterator() : isEnd(true) {}
-        RouteIterator(const RouteIterator &rhs) = default;
-        RouteIterator(RouteIterator &&rhs) = default;
-        RouteIterator &operator=(const RouteIterator &rhs) = default;
-        RouteIterator &operator=(RouteIterator &&rhs) = default;
-        RouteIterator &operator++() {
-            while (!isEnd && !(isEnd = !std::ranges::next_permutation(permutation).found) && !validPermutation()) {}
-            return *this;
-        }
-        RouteIterator operator++(int) {
-            RouteIterator ret = *this;
-            ++*this;
-            return ret;
-        }
-        bool operator==(const RouteIterator &rhs) const {
-            if (isEnd) {
-                return rhs.isEnd;
-            }
-            return !rhs.isEnd && permutation == rhs.permutation;
-        }
-        bool operator!=(const RouteIterator &rhs) const {
-            return !(*this == rhs);
-        }
-        std::string operator*() const {
-            if (isEnd) {
-                throw std::out_of_range("Day21::RouteIterator::operator*()");
-            }
-            return permutation + "A";
-        }
-    };
-
-    std::ranges::subrange<RouteIterator> getRobotRouteSegments(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) {
-        return std::ranges::subrange(RouteIterator{start, end, coordsMap}, RouteIterator{});
+    std::string getPath(const std::string path, std::map<std::pair<char, char>, std::string> const& pathMap) {
+        using std::operator""s;
+        char pc = 'A';
+        return std::accumulate(path.begin(), path.end(), ""s, [&](const std::string &a, char c) {
+            std::string const& r = pathMap.at({pc, c});
+            pc = c;
+            return a + r;
+        });
     }
 
-    std::ranges::subrange<RouteIterator> getNumpadRouteSegments(char start, char end) {
-        return getRobotRouteSegments(start, end, numpadCoords);
+    std::vector<std::string> getRobotRoute(char start, char end, std::map<char, std::pair<int, int>> const& coordsMap) {
+        if (start == end) {
+            return {"A"};
+        }
+        std::pair<int, int> const& start_pos = coordsMap.at(start);
+        std::pair<int, int> const& end_pos = coordsMap.at(end);
+        std::pair<int, int> const& banPos = coordsMap.at(' ');
+        int dx = end_pos.second - start_pos.second;
+        int dy = end_pos.first - start_pos.first;
+        char lr = dx < 0 ? '<' : '>';
+        char ud = dy < 0 ? '^' : 'v';
+        unsigned adx = std::abs(dx);
+        unsigned ady = std::abs(dy);
+        std::vector<std::string> ret;
+        std::string perm;
+        perm.reserve(adx + ady);
+        perm.append(adx, lr);
+        perm.append(ady, ud);
+        do {
+            size_t prefix = perm.find_first_not_of(perm[0]);
+            if (prefix == std::string::npos) {
+                prefix = perm.length();
+            }
+            if (start_pos.second == banPos.second && end_pos.first == banPos.first && perm[0] == ud && prefix == ady) {
+                continue;
+            }
+            if (start_pos.first == banPos.first && end_pos.second == banPos.second && perm[0] == lr && prefix == adx) {
+                continue;
+            }
+            ret.emplace_back(perm + "A");
+        } while (std::ranges::next_permutation(perm).found);
+        return ret;
     }
-
-    std::ranges::subrange<RouteIterator> getDpadRouteSegments(char start, char end) {
-        return getRobotRouteSegments(start, end, dpadCoords);
-    }
-
-    aoc2024::cached<std::string, char, char> getBestDpad2RouteSegment {[this](char start, char end) -> std::string {
-        return getDpadRouteSegments(start, end).front();
-    }};
 
     void build(int numDpads = 2) {
+        using std::operator""s;
         if (numDpads == this->numDpads) {
             return;
         }
         this->numDpads = numDpads;
-        using std::operator""s;
         routes.clear();
-        std::map<std::pair<char, char>, std::string> prev;
-        std::map<std::pair<char, char>, std::string> cur;
-        for (int i = 0; i < numDpads; ++i) {
-            std::cerr << "Step " << i << std::endl;
-            for (char origin : "^v<>A"s) {
-                for (char dest : "^v<>A"s) {
-                    std::string &rte = cur[{origin, dest}];
-                    auto rng = getDpadRouteSegments(origin, dest);
-                    if (i == 0) {
-                        rte = rng.front();
-                    } else {
-                        for (std::string path : rng) {
-                            std::string curpath;
-                            char pc = 'A';
-                            for (char c : path) {
-                                curpath += prev[{pc, c}];
-                                pc = c;
-                            }
-                            if (rte.empty() || rte.size() > curpath.size()) {
-                                rte = curpath;
-                            }
-                        }
-                    }
-                    if (origin != dest) {
-                        std::cerr << " -- " << origin << " to " << dest << ": " << rte.size() << std::endl;
-                    }
-                }
+
+        std::map<std::pair<char, char>, std::string> numpadRoutes;
+        std::map<std::pair<char, char>, std::vector<std::string>> dpadRoutes;
+
+        // Get the route pairs
+        for (char origin : dpadChars) {
+            for (char dest : dpadChars) {
+                dpadRoutes[{origin, dest}] = getRobotRoute(origin, dest, dpadCoords);
             }
-            prev = cur;
-            cur.clear();
         }
-        for (char origin : "0123456789A"s) {
-            for (char dest : "0123456789A"s) {
-                std::string &rte = routes[{origin, dest}];
-                auto rng = getNumpadRouteSegments(origin, dest);
-                for (std::string path : rng) {
-                    std::string curpath;
-                    char pc = 'A';
-                    for (char c : path) {
-                        curpath += prev[{pc, c}];
-                        pc = c;
+        aoc2024::cached<unsigned long long, char, char, int> getSegmentLength {[&](char o, char d, int n) -> unsigned long long {
+            std::vector<std::string> const& rtes = dpadRoutes.at({o, d});
+            if (n == 1) {
+                return rtes.front().size();
+            }
+            return std::ranges::min(
+                std::views::transform(
+                    rtes,
+                    [&](const std::string &r) -> unsigned long long {
+                        char p = 'A';
+                        return std::accumulate(r.begin(), r.end(), 0ull, [&](unsigned long long a, char c) -> unsigned long long {
+                            unsigned long long x = a + getSegmentLength(p, c, n - 1);
+                            p = c;
+                            return x;
+                        });
                     }
-                    if (rte.empty() || rte.size() > curpath.size()) {
-                        rte = curpath;
-                    }
-                }
+                )
+            );
+        }};
+
+        for (char origin : numpadChars) {
+            for (char dest : numpadChars) {
+                std::vector<std::string> rtes = getRobotRoute(origin, dest, numpadCoords);
+                routes[{origin, dest}] = std::ranges::min(
+                    std::views::transform(
+                        rtes,
+                        [&](const std::string &rte) {
+                            char prev = 'A';
+                            return std::accumulate(rte.begin(), rte.end(), 0ull, [&](unsigned long long acc, char curr) -> unsigned long long {
+                                unsigned long long res = acc + getSegmentLength(prev, curr, numDpads);
+                                prev = curr;
+                                return res;
+                            });
+                        }
+                    )
+                );
             }
         }
     }
 
-    std::string get_route(const std::string_view &code, int numDpads = 2) {
+    unsigned long long get_route_length(const std::string_view &code) {
         using std::operator""s;
         char prev = 'A';
-        return std::accumulate(code.begin(), code.end(), ""s, [&](const std::string &a, char c) {
-            std::string ret = a + routes[{prev, c}];
+        return std::accumulate(code.begin(), code.end(), 0ull, [&](unsigned long long a, char c) {
+            unsigned long long ret = a + routes[{prev, c}];
             prev = c;
             return ret;
         });
@@ -219,10 +171,11 @@ public:
             std::from_chars(code.begin(), code.end() - 1, value);
 
             // get commands
-            auto ans = get_route(code, 2);
+            auto ans = get_route_length(code);
+            std::cerr << code << ": " << ans << std::endl;
 
             // final complexity
-            comp += ans.size() * value;
+            comp += ans * value;
         }
         std::cout << comp << std::endl;
     }
@@ -240,5 +193,5 @@ int main () {
     aoc2024::main<Day21>();
 }
 
-std::map<std::pair<char, char>, std::string> Day21::routes {};
+std::map<std::pair<char, char>, unsigned long long> Day21::routes {};
 int Day21::numDpads = 0;

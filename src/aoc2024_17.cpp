@@ -1,5 +1,6 @@
 #include <ranges>
 #include <charconv>
+#include <deque>
 #include "aoc2024.hpp"
 
 struct end_of_program : public std::exception {};

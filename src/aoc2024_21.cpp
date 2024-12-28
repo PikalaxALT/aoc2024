@@ -43,6 +43,9 @@ class Day21 : public aoc2024::Impl {
     static constexpr std::string numpadChars {"0123456789A"};
     static constexpr std::string dpadChars {"^v<>A"};
 
+    std::map<std::pair<char, char>, std::string> numpadRoutes;
+    std::map<std::pair<char, char>, std::vector<std::string>> dpadRoutes;
+
     std::string getPath(const std::string path, std::map<std::pair<char, char>, std::string> const& pathMap) {
         using std::operator""s;
         char pc = 'A';
@@ -50,6 +53,30 @@ class Day21 : public aoc2024::Impl {
             std::string const& r = pathMap.at({pc, c});
             pc = c;
             return a + r;
+        });
+    }
+
+    aoc2024::cached<unsigned long long, char, char, int> getSegmentLength {[&](char o, char d, int n) -> unsigned long long {
+        std::vector<std::string> const& rtes = dpadRoutes.at({o, d});
+        if (n == 1) {
+            return rtes.front().size();
+        }
+        return std::ranges::min(
+            std::views::transform(
+                rtes,
+                [&](const std::string &r) -> unsigned long long {
+                    return calcFinalLength(r, n - 1);
+                }
+            )
+        );
+    }};
+
+    unsigned long long calcFinalLength(const std::string &r, int n) {
+        char p = 'A';
+        return std::accumulate(r.begin(), r.end(), 0ull, [&](unsigned long long a, char c) -> unsigned long long {
+            unsigned long long x = a + getSegmentLength(p, c, n);
+            p = c;
+            return x;
         });
     }
 
@@ -95,34 +122,21 @@ class Day21 : public aoc2024::Impl {
         this->numDpads = numDpads;
         routes.clear();
 
-        std::map<std::pair<char, char>, std::string> numpadRoutes;
-        std::map<std::pair<char, char>, std::vector<std::string>> dpadRoutes;
-
         // Get the route pairs
+        #if __cpp_lib_ranges_cartesian_product >= 202207L
+        dpadRoutes = std::views::cartesian_product(dpadChars, dpadChars)
+            | std::views::transform([this](auto t) {
+                auto [origin, dest] = t;
+                return std::make_pair(std::make_pair(origin, dest), getRobotRoute(origin, dest, dpadCoords));
+            })
+            | std::ranges::to<std::map>();
+        #else
         for (char origin : dpadChars) {
             for (char dest : dpadChars) {
                 dpadRoutes[{origin, dest}] = getRobotRoute(origin, dest, dpadCoords);
             }
         }
-        aoc2024::cached<unsigned long long, char, char, int> getSegmentLength {[&](char o, char d, int n) -> unsigned long long {
-            std::vector<std::string> const& rtes = dpadRoutes.at({o, d});
-            if (n == 1) {
-                return rtes.front().size();
-            }
-            return std::ranges::min(
-                std::views::transform(
-                    rtes,
-                    [&](const std::string &r) -> unsigned long long {
-                        char p = 'A';
-                        return std::accumulate(r.begin(), r.end(), 0ull, [&](unsigned long long a, char c) -> unsigned long long {
-                            unsigned long long x = a + getSegmentLength(p, c, n - 1);
-                            p = c;
-                            return x;
-                        });
-                    }
-                )
-            );
-        }};
+        #endif //__cpp_lib_ranges_cartesian_product
 
         for (char origin : numpadChars) {
             for (char dest : numpadChars) {
@@ -131,12 +145,7 @@ class Day21 : public aoc2024::Impl {
                     std::views::transform(
                         rtes,
                         [&](const std::string &rte) {
-                            char prev = 'A';
-                            return std::accumulate(rte.begin(), rte.end(), 0ull, [&](unsigned long long acc, char curr) -> unsigned long long {
-                                unsigned long long res = acc + getSegmentLength(prev, curr, numDpads);
-                                prev = curr;
-                                return res;
-                            });
+                            return calcFinalLength(rte, numDpads);
                         }
                     )
                 );
@@ -170,9 +179,8 @@ public:
             unsigned long long value;
             std::from_chars(code.begin(), code.end() - 1, value);
 
-            // get commands
+            // get command length
             auto ans = get_route_length(code);
-            std::cerr << code << ": " << ans << std::endl;
 
             // final complexity
             comp += ans * value;

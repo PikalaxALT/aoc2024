@@ -20,7 +20,7 @@ public:
         right.reserve(nlines);
 
         for (const auto& line : std::views::split(std::string_view(input), "\n"sv)) {
-            const std::string_view &view {line};
+            std::string_view view {line};
             auto row = std::views::split(view, " "sv) | std::ranges::to<std::vector<std::string>>();
             left.push_back(std::stoi(row.front()));
             right.push_back(std::stoi(row.back()));

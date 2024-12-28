@@ -18,16 +18,17 @@ class Day12 : public aoc2024::Impl {
     std::set<std::pair<size_t, size_t>> getRegion(ssize_t x, ssize_t y, char c) {
         std::set<std::pair<size_t, size_t>> result;
         if (
-                y >= 0
-                && y < height
-                && x >= 0
-                && x < width
-                && plots[y][x] == c
-                && visited.insert({y, x}).second
-            ) {
+            y >= 0
+            && y < height
+            && x >= 0
+            && x < width
+            && plots[y][x] == c
+            && visited.insert({y, x}).second
+        ) {
             result.insert({y, x});
             for (auto [dy, dx] : directions) {
-                result.insert_range(getRegion(x + dx, y + dy, c));
+                auto reg = getRegion(x + dx, y + dy, c);
+                result.insert(reg.begin(), reg.end());
             }
         }
         return result;

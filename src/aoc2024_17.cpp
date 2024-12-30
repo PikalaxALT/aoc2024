@@ -137,8 +137,9 @@ public:
     }
 
     void part1 () final {
+        using aoc2024::operator<<;
         std::vector<unsigned> outputs = run();
-        aoc2024::print(std::cout, outputs, ",") << "\n";
+        std::cout << outputs << "\n";
     }
 
     std::string combo_dism(unsigned x) {

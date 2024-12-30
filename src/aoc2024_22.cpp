@@ -65,8 +65,8 @@ public:
         auto kvpair = std::ranges::max(std::views::keys(patterns), [&](const auto &a, const auto &b) {
             return patterns.at(a) < patterns.at(b);
         });
-        std::cerr << "{";
-        aoc2024::print(std::cerr, kvpair, ",") << "}\n";
+        using aoc2024::operator<<;
+        std::cerr << "{" << kvpair << "}\n";
         std::cout << patterns.at(kvpair) << std::endl;
     }
 };

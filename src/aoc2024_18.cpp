@@ -45,7 +45,8 @@ public:
             assert(coord.size() == 2);
             layout[coord[1]][coord[0]] = '#';
             if (isPart2 && solve() == -1u) {
-                aoc2024::print(std::cout, coord, ",") << std::endl;
+                using aoc2024::operator<<;
+                std::cout << coord << std::endl;
                 break;
             }
         }

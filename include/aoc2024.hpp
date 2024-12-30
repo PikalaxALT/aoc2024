@@ -100,7 +100,7 @@ namespace aoc2024 {
     concept has_left_shift = requires (S s, R r) { s << r; };
 
     template<typename Strm, std::ranges::range Range, typename Char = char>
-    Strm &print(Strm &strm, Range const &range, const Char *sep = ", ") {
+    Strm &print(Strm &strm, Range const &range, const Char *sep = ",") {
         for (const Char *_sep = ""; const auto &x : range) {
             strm << _sep << x;
             _sep = sep;
@@ -118,7 +118,7 @@ namespace aoc2024 {
     }
 
     template<typename Strm, std::ranges::range Range, typename Char = char>
-        requires (std::derived_from<Strm, std::basic_ostream<Char>> && !has_left_shift<Strm, Range>)
+        requires (std::derived_from<Strm, std::basic_ostream<Char>> && has_left_shift<Strm, std::ranges::range_value_t<Range>>)
     Strm &operator<<(Strm &strm, Range const &range) {
         return print(strm, range);
     }

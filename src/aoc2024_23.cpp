@@ -67,7 +67,8 @@ public:
         if (groups.empty()) {
             throw std::runtime_error("largest clique is not unique");
         }
-        aoc2024::print(std::cout, *groups.begin(), ",") << std::endl;
+        using aoc2024::operator<<;
+        std::cout << *groups.begin() << std::endl;
     }
 };
 

@@ -7,7 +7,10 @@ string(TIMESTAMP YEAR %Y)
 find_package(Boost REQUIRED COMPONENTS log)
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+# Temporary until clang adds support for modules
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+    set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+endif()
 if(${YEAR} GREATER 2024 OR ${DAY} GREATER 25)
     set(DAY 25)
 endif()

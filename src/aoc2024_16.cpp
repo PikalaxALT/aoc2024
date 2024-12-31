@@ -1,6 +1,5 @@
 #include "aoc2024.hpp"
 #include <ranges>
-#include <deque>
 #include <map>
 #include <set>
 #include <algorithm>

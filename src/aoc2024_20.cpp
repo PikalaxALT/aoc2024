@@ -60,44 +60,40 @@ public:
 
     unsigned long long puzzle(int max_cheat) {
         auto path = solve();
-        std::cerr << "Path has " << path.size() << " nodes\n";
-        unsigned long long count = 0;
-        unsigned long long threshold = isExample() ? (max_cheat == 2 ? 20 : 50) : 100;
+        int threshold = isExample() ? (max_cheat == 2 ? 20 : 50) : 100;
+        std::set<std::pair<coordui2_t, coordui2_t>> cheats;
+        std::map<int, int> savings;
         for (const auto &[pos, score] : path) {
-            std::deque<std::vector<coordui2_t>> cheatingEdge {{pos}};
-            std::set<coordui2_t> seenEnds {};
-            while (!cheatingEdge.empty()) {
-                auto curCheat = cheatingEdge.front();
-                cheatingEdge.pop_front();
-                auto length = curCheat.size();
-                if (length > max_cheat) {
-                    continue;
-                }
-                auto ppos = curCheat.back();
-                for (const auto &dir : directions) {
-                    coordui2_t npos { ppos[0] + dir[0], ppos[1] + dir[1] };
-                    if (std::ranges::contains(curCheat, npos)) {
-                        continue;
-                    }
-                    auto curExtend = curCheat;
-                    curExtend.push_back(npos);
-                    if (path.contains(npos)) {
-                        if (!seenEnds.insert(npos).second) {
+            // Fan out up to max_cheat units away
+            std::set<coordui2_t> seen;
+            std::set<coordui2_t> leadingEdge {pos};
+            for (int i = 0; i < max_cheat; ++i) {
+                std::set<coordui2_t> nextStack;
+                for (const auto &cp : leadingEdge) {
+                    for (const auto &dir : directions) {
+                        coordui2_t np {cp[0] + dir[0], cp[1] + dir[1]};
+                        if (np[0] >= grid[0].size() || np[1] >= grid.size() || !seen.insert(np).second) {
                             continue;
                         }
-                        if (path[npos] <= path[pos] + length) {
-                            continue;
+                        if (path.contains(np)) {
+                            unsigned cheatScore = score + i + 1;
+                            if (path[np] >= cheatScore + threshold) {
+                                ++savings[path[np] - cheatScore];
+                                cheats.insert({pos, np});
+                            }
                         }
-                        if (path[npos] - (path[pos] + length) >= threshold) {
-                            ++count;
-                        }
-                        continue;
+                        nextStack.insert(np);
                     }
-                    cheatingEdge.push_back(curExtend);
                 }
+                leadingEdge = nextStack;
             }
         }
-        return count;
+        if (isExample()) {
+            for (auto [s, c] : savings) {
+                std::cerr << std::format("{:d} cheats save {:d}ps\n", c, s);
+            }
+        }
+        return cheats.size();
     }
 
     void part1 () final {
@@ -105,8 +101,7 @@ public:
     }
 
     void part2 () final {
-        // not solved in a reasonable amount of time
-        // std::cout << puzzle(20) << std::endl;
+        std::cout << puzzle(20) << std::endl;
     }
 };
 

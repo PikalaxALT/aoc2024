@@ -2,11 +2,23 @@
 #include <ranges>
 #include <deque>
 #include <map>
+#include <set>
 #include <algorithm>
 
 class Day16 : public aoc2024::Impl {
     using coordi2_t = std::array<int, 2>;
 
+    enum Direction : uint8_t {
+        south,
+        east,
+        north,
+        west,
+        max,
+    };
+    std::array<std::array<Direction, 3>, 4> possibleTurns {{
+        { west, east },
+        { south, north },
+    }};
     static constexpr std::array<coordi2_t, 4> directions {{
         {{  0, -1 }}, // north
         {{  1,  0 }}, // east
@@ -30,73 +42,72 @@ public:
     }
 
     unsigned maze_solve(bool isPart2 = false) {
-        // The strategy is to find the best path, then find all corners leading there
-        std::deque<coordi2_t> leadingEdge {start};
-        std::vector<std::vector<std::tuple<coordi2_t, unsigned, unsigned>>> dp (grid.size());
-        std::ranges::for_each(dp, [this](auto &row) {
-            row.resize(grid[0].size(), {{-1, -1}, 4, -1u});
-        });
-        dp[start[1]][start[0]] = {start, 1, 0};
-        std::map<std::pair<coordi2_t, coordi2_t>, std::map<coordi2_t, unsigned>> corners;
+        unsigned result = 0;
+        using node_t = std::tuple<unsigned, coordi2_t, Direction>;
+
+        // Priority queue for leadingEdge. use greater<node_t> to pop the smallest element first
+        std::priority_queue<node_t, std::vector<node_t>, std::greater<node_t>> leadingEdge;
+        leadingEdge.emplace(0, start, Direction::east);
+        std::vector<std::vector<std::array<unsigned, Direction::max>>> shortestDistance (grid.size());
+        for (auto &row : shortestDistance) {
+            row.assign(grid[0].size(), {UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX});
+        }
+        shortestDistance[start[1]][start[0]][Direction::east] = 0;
+        std::map<std::pair<coordi2_t, Direction>, std::set<std::pair<coordi2_t, Direction>>> backTrace {{{start, Direction::east}, {}}};
 
         while (!leadingEdge.empty()) {
-            coordi2_t pos;
-            auto [x, y] = pos = leadingEdge.front();
-            leadingEdge.pop_front();
-            auto [ppos, pdir, pscore] = dp[y][x];
-            if (pos == end) {
-                corners[{pos, pos}][ppos] = pscore;
+            auto [score, pos, dir] = leadingEdge.top();
+            leadingEdge.pop();
+            if (score > shortestDistance[pos[1]][pos[0]][dir]) {
                 continue;
             }
-            for (int turn = -1; turn <= 1; ++turn) {
-                unsigned ndir = (pdir + turn + 4) % 4;
-                auto [dx, dy] = directions[ndir];
-                int nx = x + dx;
-                int ny = y + dy;
-                if (grid[ny][nx] == '#') {  // wall, do not enter
-                    continue;
+
+            auto tryInsert = [&](const coordi2_t &npos, Direction ndir, unsigned nscore) -> void {
+                auto comp = (nscore <=> shortestDistance[npos[1]][npos[0]][ndir]);
+                if (comp == std::strong_ordering::greater) {
+                    return;
                 }
-                unsigned nscore = pscore + 1 + 1000 * (turn != 0);
-                coordi2_t npos {nx, ny};
-                auto &[rnpos, rndir, rnscore] = dp[ny][nx];
-                if (nscore <= rnscore) {
-                    rnpos = pos;
-                    rndir = ndir;
-                    rnscore = nscore;
-                    leadingEdge.push_back(npos);
+                auto &bt = backTrace[{npos, ndir}];
+                if (comp == std::strong_ordering::less) {
+                    bt.clear();
                 }
-                corners[{npos, pos}][ppos] = nscore;
+                bt.emplace(pos, dir);
+                if (comp == std::strong_ordering::less) {
+                    leadingEdge.emplace(nscore, npos, ndir);
+                }
+                shortestDistance[npos[1]][npos[0]][ndir] = nscore;
+            };
+
+            // Handle turns
+            for (auto ndir : possibleTurns[dir % 2]) {
+                tryInsert(pos, ndir, score + 1000);
+            }
+            // Handle step
+            coordi2_t npos { pos[0] + directions[dir][0], pos[1] + directions[dir][1] };
+            if (grid[npos[1]][npos[0]] != '#') {
+                tryInsert(npos, dir, score + 1);
             }
         }
 
-        unsigned finalScore = std::get<2>(dp[end[1]][end[0]]);
-        if (!isPart2) {
-            return finalScore;
-        }
+        result = std::ranges::min(shortestDistance[end[1]][end[0]]);
 
-        std::deque<std::tuple<coordi2_t, coordi2_t, unsigned>> trailingEdge {{end, end, finalScore}};
-
-        unsigned result = 0;
-        while (!trailingEdge.empty()) {
-            auto [npos, pos, score] = trailingEdge.front();
-            trailingEdge.pop_front();
-            ++result;
-            if (pos == start) {
-                continue;
-            }
-            const auto &tb = corners.at({npos, pos});
-            for (const auto &[ppos, pscore] : tb) {
-                if (pscore != score) {
-                    continue;
+        if (isPart2) {
+            std::set<coordi2_t> trailingEdge {end};
+            std::set<std::pair<coordi2_t, Direction>> curStack;
+            for (Direction dir = Direction::south; dir != Direction::max; dir = static_cast<Direction>(dir + 1)) {
+                if (shortestDistance[end[1]][end[0]][dir] == result) {
+                    curStack.emplace(end, dir);
                 }
-                unsigned ppscore = score;
-                if (pos != end) {
-                    coordi2_t dir2 { npos[0] - pos[0], npos[1] - pos[1] };
-                    coordi2_t dir1 { pos[0] - ppos[0], pos[1] - ppos[1] };
-                    ppscore -= 1 + 1000 * (dir1 != dir2);
-                }
-                trailingEdge.push_back({pos, ppos, ppscore});
             }
+            while (!curStack.empty()) {
+                std::set<std::pair<coordi2_t, Direction>> nextStack;
+                for (const auto &[pos, dir] : curStack) {
+                    trailingEdge.insert(pos);
+                    nextStack.insert_range(backTrace.at({pos, dir}));
+                }
+                curStack = nextStack;
+            }
+            result = trailingEdge.size();
         }
 
         return result;
@@ -107,9 +118,9 @@ public:
     }
 
     // Not complete
-    // void part2 () final {
-    //     std::cout << maze_solve(true) << std::endl;
-    // }
+    void part2 () final {
+        std::cout << maze_solve(true) << std::endl;
+    }
 };
 
 int main () {
